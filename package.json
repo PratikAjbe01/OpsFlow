@@ -1,0 +1,11 @@
+{
+  "name": "opsflow-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present"
+  }
+}
