@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import connectDB from './config/db';
 import authRoutes from './modules/auth/auth.routes';
+import workspaceRoutes from './modules/workspaces/workspace.routes';
 // Load env vars
 dotenv.config();
 connectDB();
@@ -26,7 +27,7 @@ app.get('/health', (req: Request, res: Response) => {
     res.status(200).json({ status: 'OK', service: 'OpsFlow API' });
 });
 app.use('/api/auth',authRoutes)
-
+app.use('/api/workspaces',workspaceRoutes);
 // Starting Server
 app.listen(PORT, () => {
     console.log(`✅ Server running on http://localhost:${PORT}`);
