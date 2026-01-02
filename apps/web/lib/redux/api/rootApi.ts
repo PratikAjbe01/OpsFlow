@@ -3,6 +3,7 @@ import { RootState } from '../store';
 
 export const rootApi = createApi({
   reducerPath: 'api',
+  tagTypes: ['Workspaces', 'Forms', 'Auth'],
   baseQuery: fetchBaseQuery({
     baseUrl: 'http://localhost:8761/api', // Backend URL
     prepareHeaders: (headers, { getState }) => {
