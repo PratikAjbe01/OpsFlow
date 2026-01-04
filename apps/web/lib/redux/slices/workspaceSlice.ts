@@ -2,7 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 interface WorkspaceState {
   currentWorkspace: {
-    id: string;
+    _id: string;
     name: string;
     slug: string;
   } | null;
