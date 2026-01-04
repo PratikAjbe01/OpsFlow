@@ -69,7 +69,7 @@ export default function DashboardHeader() {
                   className="flex w-full items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                 >
                   <span>{w.name}</span>
-                  {currentWorkspace?.id === w._id && <Check className="h-4 w-4 text-blue-600" />}
+                  {currentWorkspace?._id === w._id && <Check className="h-4 w-4 text-blue-600" />}
                 </button>
               ))}
 
