@@ -1,19 +1,29 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { LayoutDashboard, FileText, Settings, LogOut, Plus } from 'lucide-react';
-import { useAppDispatch } from '@/lib/redux/hooks';
-import { logout } from '@/lib/redux/slices/authSlice';
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  LayoutDashboard,
+  FileText,
+  Settings,
+  LogOut,
+  Plus,
+} from "lucide-react";
+import { useAppDispatch } from "@/lib/redux/hooks";
+import { logout } from "@/lib/redux/slices/authSlice";
 
 export default function Sidebar() {
   const pathname = usePathname();
   const dispatch = useAppDispatch();
+  const router = useRouter();
+  const handleLogout = () => {
+    dispatch(logout());
+    router.push("/login");
+  };
 
   const navItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'My Forms', href: '/dashboard/forms', icon: FileText },
-    { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { name: "My Forms", href: "/dashboard/forms", icon: FileText },
   ];
 
   return (
@@ -33,10 +43,9 @@ export default function Sidebar() {
               href={item.href}
               className={`group flex items-center rounded-md px-2 py-2 text-sm font-medium transition-colors ${
                 isActive
-                  ? 'bg-slate-800 text-white'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
+                  ? "bg-slate-800 text-white"
+                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
+              }`}>
               <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
               {item.name}
             </Link>
@@ -47,9 +56,8 @@ export default function Sidebar() {
       {/* User Actions */}
       <div className="border-t border-slate-800 p-4">
         <button
-          onClick={() => dispatch(logout())}
-          className="flex w-full items-center rounded-md px-2 py-2 text-sm font-medium text-red-400 hover:bg-slate-800 hover:text-red-300"
-        >
+          onClick={() => handleLogout()}
+          className="flex w-full items-center rounded-md px-2 py-2 text-sm font-medium text-red-400 hover:bg-slate-800 hover:text-red-300">
           <LogOut className="mr-3 h-5 w-5" />
           Logout
         </button>

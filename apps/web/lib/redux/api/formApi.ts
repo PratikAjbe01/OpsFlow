@@ -13,7 +13,7 @@ export interface Form {
 
 export const formApi = rootApi.injectEndpoints({
   endpoints: (builder) => ({
-    // 1. Get all forms for a specific workspace
+    // 1. Get all forms acc to workspace
     getForms: builder.query<Form[], string>({
       query: (workspaceId) => `/forms?workspaceId=${workspaceId}`,
       transformResponse: (response: { forms: Form[] }) => response.forms,
@@ -30,8 +30,16 @@ export const formApi = rootApi.injectEndpoints({
       transformResponse: (response: { form: Form }) => response.form,
       invalidatesTags: ['Forms'],
     }),
+     getSubmissions: builder.query<
+      { submissions: any[]; pagination: { page: number; total: number; pages: number } }, 
+      { formId: string; page: number; limit: number; search: string }
+    >({
+      query: ({ formId, page, limit, search }) => 
+        `/forms/${formId}/submissions?page=${page}&limit=${limit}&search=${search || ''}`,
+      providesTags: ['Submissions'], 
+    }),
 
-    // 3. Get single form (for the editor later)
+
     getFormById: builder.query<Form, string>({
       query: (id) => `/forms/${id}`,
       transformResponse: (response: { form: Form }) => response.form,
@@ -41,9 +49,9 @@ export const formApi = rootApi.injectEndpoints({
         url: `/forms/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Forms'], // This auto-refreshes the list!
+      invalidatesTags: ['Forms'], 
     }),
   }),
 });
 
-export const { useGetFormsQuery, useCreateFormMutation, useGetFormByIdQuery, useDeleteFormMutation } = formApi;
+export const { useGetFormsQuery, useCreateFormMutation, useGetFormByIdQuery, useDeleteFormMutation,useGetSubmissionsQuery } = formApi;

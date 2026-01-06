@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { createForm, getWorkspaceForms, getFormById, updateContent } from './form.service';
+import { createForm, getWorkspaceForms, getFormById } from './form.service';
 import Form from './form.model';
 // Create a new empty form
 export const create = async (req: Request, res: Response) => {

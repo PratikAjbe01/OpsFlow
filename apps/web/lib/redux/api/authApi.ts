@@ -16,8 +16,15 @@ export const authApi = rootApi.injectEndpoints({
         body: credentials,
       }),
     }),
+    logout:builder.mutation({
+       query:(credentials)=>({
+        url:'/auth/logout',
+        method:'POST',
+        body:credentials,
+       })
+    }),
   }),
 });
 
 // Export hooks for usage in functional components
-export const { useLoginMutation, useRegisterMutation } = authApi;
+export const { useLoginMutation, useRegisterMutation, useLogoutMutation } = authApi;
