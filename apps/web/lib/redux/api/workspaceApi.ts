@@ -39,7 +39,32 @@ export const workspaceApi = rootApi.injectEndpoints({
       transformResponse: (response: CreateWorkspaceResponse) => response.workspace,
       invalidatesTags: ['Workspaces'],
     }),
+    getWorkspaceMembers: builder.query({
+      query: (workspaceId) => `/workspaces/${workspaceId}/members`,
+      providesTags: ['Members'],
+    }),
+
+    // 2. Invite Member
+    addMember: builder.mutation({
+      query: ({ workspaceId, email, role }) => ({
+        url: `/workspaces/${workspaceId}/members`,
+        method: 'POST',
+        body: { email, role },
+      }),
+      invalidatesTags: ['Members'],
+    }),
+
+    // 3. Remove Member
+    removeMember: builder.mutation({
+      query: ({ workspaceId, userId }) => ({
+        url: `/workspaces/${workspaceId}/members/${userId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Members'],
+    }),
   }),
 });
 
-export const { useGetWorkspacesQuery, useCreateWorkspaceMutation } = workspaceApi;
+export const { useGetWorkspacesQuery, useCreateWorkspaceMutation,useGetWorkspaceMembersQuery, 
+  useAddMemberMutation, 
+  useRemoveMemberMutation } = workspaceApi;

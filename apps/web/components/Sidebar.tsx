@@ -8,6 +8,7 @@ import {
   Settings,
   LogOut,
   Plus,
+  Users,
 } from "lucide-react";
 import { useAppDispatch } from "@/lib/redux/hooks";
 import { logout } from "@/lib/redux/slices/authSlice";
@@ -24,6 +25,7 @@ export default function Sidebar() {
   const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "My Forms", href: "/dashboard/forms", icon: FileText },
+    { name: "Team Members", href: "/dashboard/members", icon: Users },
   ];
 
   return (
