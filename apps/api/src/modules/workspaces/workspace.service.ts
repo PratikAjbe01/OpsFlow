@@ -35,5 +35,28 @@ export const createWorkspace = async (name: string, userId: string) => {
 };
 
 export const getUserWorkspaces = async (userId: string) => {
-  return await Workspace.find({ "members.user": userId });
+
+  console.log("Searching for User ID (String):", userId);
+
+ 
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+  console.log("Searching for User ID (ObjectId):", userObjectId);
+
+  
+  const workspaces = await Workspace.find({
+    $or: [
+      { ownerId: userObjectId },          
+      { "members.userId": userObjectId } 
+    ]
+  }).sort({ createdAt: -1 });
+
+  console.log(`Found ${workspaces.length} workspaces.`);
+  
+  
+  if (workspaces.length === 0) {
+    const all = await Workspace.find({});
+    console.log("DUMP: All Workspaces in DB:", JSON.stringify(all, null, 2));
+  }
+  
+  return workspaces;
 };
