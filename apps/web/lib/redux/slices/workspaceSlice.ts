@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { logout } from './authSlice';
 
 interface WorkspaceState {
   currentWorkspace: {
@@ -21,7 +22,14 @@ const workspaceSlice = createSlice({
     },
     clearWorkspace: (state) => {
       state.currentWorkspace = null;
-    }
+    },
+    
+  },
+  extraReducers: (builder) => {
+    builder.addCase(logout, () => {
+    
+      return initialState; 
+    });
   },
 });
 

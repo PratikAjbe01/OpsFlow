@@ -9,25 +9,34 @@ import {
   PURGE,
   REGISTER,
 } from 'redux-persist';
-import storage from 'redux-persist/lib/storage'; // defaults to localStorage for web
+import storage from 'redux-persist/lib/storage';
 import authReducer from './slices/authSlice';
 import workspaceReducer from './slices/workspaceSlice';
 import builderReducer from './slices/builderSlice';
 import { rootApi } from './api/rootApi';
 
-// 1. Create a root reducer that combines all slices
-const rootReducer = combineReducers({
+// 1. Combine all reducers
+const appReducer = combineReducers({
   auth: authReducer,
   workspace: workspaceReducer,
   builder: builderReducer,
   [rootApi.reducerPath]: rootApi.reducer,
 });
 
-// 2. Configure Persistence
+// 2. Root Reducer with "Reset on Logout"
+const rootReducer = (state: any, action: any) => {
+  if (action.type === 'auth/logout') {
+    // This clears the Redux state completely
+    storage.removeItem('persist:root'); // Optional: Clear LocalStorage explicitly
+    state = undefined; 
+  }
+  return appReducer(state, action);
+};
+
+// 3. Configure Persistence
 const persistConfig = {
   key: 'root',
   storage,
-  // Blacklist the API cache (RTK Query manages its own cache life)
   blacklist: [rootApi.reducerPath], 
 };
 
@@ -36,7 +45,6 @@ const persistedReducer = persistReducer(persistConfig, rootReducer);
 export const makeStore = () => {
   return configureStore({
     reducer: persistedReducer,
-    // 3. Middleware to ignore serializable checks for Redux Persist actions
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
         serializableCheck: {
