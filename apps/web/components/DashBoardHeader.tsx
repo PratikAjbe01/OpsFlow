@@ -17,7 +17,7 @@ export default function DashboardHeader() {
     refetchOnMountOrArgChange: true,
   });
 
-  // 🔍 DEBUGGING: Check your browser console to see exactly what 'data' holds
+  // 🔍 DEBUGGING:
   console.log("Redux Workspaces Data:", data);
 
   // 2. FLEXIBLE EXTRACTION (The Fix)
