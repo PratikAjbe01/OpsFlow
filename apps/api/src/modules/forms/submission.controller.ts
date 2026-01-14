@@ -3,6 +3,7 @@ import Submission from './submission.model';
 import Form from './form.model';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
+import { getFormRole } from './forms.utils';
 dotenv.config(); 
 
 export const submitForm = async (req: Request, res: Response) => {
@@ -63,7 +64,10 @@ export const getSubmissions = async (req: Request, res: Response) => {
     const search = req.query.search as string;
     const skip = (page - 1) * limit;
 
-  
+  const role = await getFormRole(formId, req.user!._id);
+    if (!role || (role !== 'owner' && role !== 'admin')) {
+       return res.status(403).json({ success: false, message: 'Hidden from Editors/Viewers' });
+    }
     const form = await Form.findOne({ _id: formId, creatorId: req.user!._id });
     if (!form) {
       res.status(403).json({ success: false, message: 'Unauthorized' });

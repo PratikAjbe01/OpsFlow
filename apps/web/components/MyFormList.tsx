@@ -1,93 +1,133 @@
-'use client';
+"use client";
 
-import { useGetFormsQuery, useDeleteFormMutation } from '@/lib/redux/api/formApi';
-import { useAppSelector } from '@/lib/redux/hooks';
-import Link from 'next/link';
-import { Calendar, BarChart, Trash2, Plus } from 'lucide-react';
+import {
+  useGetFormsQuery,
+  useDeleteFormMutation,
+} from "@/lib/redux/api/formApi";
+import { useAppSelector } from "@/lib/redux/hooks";
+import Link from "next/link";
+import { Calendar, BarChart3, Trash2, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function MyFormsList() {
   const { currentWorkspace } = useAppSelector((state) => state.workspace);
-  const { user } = useAppSelector((state) => state.auth); // Get current user
-  
-  // Fetch ALL workspace forms (we filter client-side for now)
+  const { user } = useAppSelector((state) => state.auth);
+
   const { data: forms, isLoading } = useGetFormsQuery(
-    currentWorkspace?._id || '', 
+    currentWorkspace?._id || "",
     { skip: !currentWorkspace }
   );
-  
+
   const [deleteForm] = useDeleteFormMutation();
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.preventDefault();
-    if (confirm('Are you sure you want to delete this form?')) {
-        await deleteForm(id);
+    if (confirm("Delete this form permanently?")) {
+      await deleteForm(id);
     }
   };
 
   if (!currentWorkspace) return null;
-  if (isLoading) return <div className="mt-8 text-gray-500">Loading your forms...</div>;
 
-  // 👇 THE FILTER LOGIC: Only show forms where I am the creator
+  if (isLoading)
+    return (
+      <div className="mt-8 text-sm text-muted-foreground">
+        Loading your forms…
+      </div>
+    );
+
   const myForms = forms?.filter((f: any) => f.creatorId === user?.id) || [];
 
+  /* ---------------------------------- */
+  /* Empty State */
+  /* ---------------------------------- */
+
+  if (myForms.length === 0) {
+    return (
+      <div className="mt-10 rounded-xl border border-border bg-card/50 backdrop-blur p-10 text-center">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-sidebar-primary/10 mb-4">
+          <Plus className="w-5 h-5 text-sidebar-primary" />
+        </div>
+
+        <h3 className="text-lg font-semibold tracking-tight">No forms yet</h3>
+
+        <p className="mt-1 text-sm text-muted-foreground max-w-sm mx-auto">
+          You haven’t created any forms in this workspace yet. Start by creating
+          one from the dashboard.
+        </p>
+
+        <div className="mt-6">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md border border-sidebar-primary bg-sidebar-primary text-sidebar-primary-foreground text-sm font-semibold hover:opacity-90 transition">
+            <Plus className="w-4 h-4" />
+            Go to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  /* ---------------------------------- */
+  /* Forms Grid */
+  /* ---------------------------------- */
+
   return (
-    <div className="mt-8">
-      {myForms.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg border border-dashed border-gray-300">
-            <h3 className="text-sm font-medium text-gray-900">You haven't created any forms yet</h3>
-            <p className="mt-1 text-sm text-gray-500">Go to the dashboard to create one.</p>
-            <div className="mt-6">
-                <Link href="/dashboard" className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
-                    <Plus className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
-                    Go to Dashboard
-                </Link>
-            </div>
-        </div>
-      ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {myForms.map((form: any) => (
-            <Link 
-              key={form._id} 
-              href={`/builder/${form._id}`}
-              className="group relative block rounded-lg bg-white shadow transition hover:shadow-md border border-gray-100"
-            >
-              {/* Delete Button */}
-              <button
-                onClick={(e) => handleDelete(e, form._id)}
-                className="absolute top-4 right-4 z-10 p-2 text-gray-400 opacity-0 hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 rounded-full transition-all"
-                title="Delete Form"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+    <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {myForms.map((form: any) => (
+        <Link
+          key={form._id}
+          href={`/builder/${form._id}`}
+          className="group relative rounded-xl border border-border bg-card/50 backdrop-blur p-5 transition-colors hover:border-sidebar-primary/40">
+          {/* Delete */}
+          <button
+            onClick={(e) => handleDelete(e, form._id)}
+            className="absolute top-3 right-3 p-2 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all"
+            title="Delete form">
+            <Trash2 className="w-4 h-4" />
+          </button>
 
-              <div className="p-6">
-                <h3 className="text-lg font-medium text-gray-900 truncate pr-8">
-                  {form.name}
-                </h3>
-                
-                <p className="mt-1 text-sm text-gray-500">
-                  {form.isPublished ? (
-                    <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Published</span>
-                  ) : (
-                    <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">Draft</span>
-                  )}
-                </p>
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold tracking-tight truncate pr-6">
+              {form.name}
+            </h3>
 
-                <div className="mt-6 flex items-center justify-between text-sm text-gray-500">
-                  <div className="flex items-center">
-                    <BarChart className="mr-1.5 h-4 w-4 text-gray-400" />
-                    {form.submissionsCount}
-                  </div>
-                  <div className="flex items-center">
-                    <Calendar className="mr-1.5 h-4 w-4 text-gray-400" />
-                    {new Date(form.createdAt).toLocaleDateString()}
-                  </div>
-                </div>
+            {/* Status */}
+            <FormStatus published={form.isPublished} />
+
+            {/* Meta */}
+            <div className="pt-4 flex items-center justify-between text-xs font-mono text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <BarChart3 className="w-4 h-4" />
+                {form.submissionsCount} submissions
               </div>
-            </Link>
-          ))}
-        </div>
-      )}
+
+              <div className="flex items-center gap-1.5">
+                <Calendar className="w-4 h-4" />
+                {new Date(form.createdAt).toLocaleDateString()}
+              </div>
+            </div>
+          </div>
+        </Link>
+      ))}
     </div>
+  );
+}
+
+/* ---------------------------------- */
+/* Status Badge */
+/* ---------------------------------- */
+
+function FormStatus({ published }: { published: boolean }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex w-fit items-center px-2.5 py-1 rounded-full border text-xs font-mono",
+        published
+          ? "border-sidebar-primary/30 bg-sidebar-primary/10 text-sidebar-primary"
+          : "border-border bg-secondary/30 text-muted-foreground"
+      )}>
+      {published ? "Published" : "Draft"}
+    </span>
   );
 }

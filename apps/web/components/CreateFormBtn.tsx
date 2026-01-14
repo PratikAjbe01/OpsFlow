@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useCreateFormMutation } from '@/lib/redux/api/formApi';
-import { useAppSelector } from '@/lib/redux/hooks';
-import { Plus } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useCreateFormMutation } from "@/lib/redux/api/formApi";
+import { useAppSelector } from "@/lib/redux/hooks";
+import { Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function CreateFormBtn() {
   const router = useRouter();
@@ -12,20 +12,19 @@ export default function CreateFormBtn() {
 
   const handleCreate = async () => {
     if (!currentWorkspace) return;
-    
-    const name = prompt('Form Name:');
+
+    const name = prompt("Form Name:");
     if (!name) return;
 
     try {
-      const form = await createForm({ 
-        name, 
-        workspaceId: currentWorkspace._id 
+      const form = await createForm({
+        name,
+        workspaceId: currentWorkspace._id,
       }).unwrap();
-      
-      // Redirect to the Builder immediately
+
       router.push(`/builder/${form._id}`);
-    } catch (error) {
-      alert('Failed to create form');
+    } catch {
+      alert("Failed to create form");
     }
   };
 
@@ -35,16 +34,14 @@ export default function CreateFormBtn() {
     <button
       onClick={handleCreate}
       disabled={isLoading}
-      className="flex items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-8 hover:border-blue-500 hover:bg-blue-50 transition-all group"
-    >
-      <div className="text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 group-hover:bg-blue-200">
-          <Plus className="h-6 w-6 text-blue-600" />
-        </div>
-        <span className="mt-2 block text-sm font-semibold text-gray-900">
-          {isLoading ? 'Creating...' : 'Create New Form'}
-        </span>
+      className="group flex w-full flex-col items-center justify-center gap-3 text-sidebar-primary focus:outline-none">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sidebar-primary/15 transition group-hover:bg-sidebar-primary/25">
+        <Plus className="h-6 w-6" />
       </div>
+
+      <span className="text-sm font-semibold">
+        {isLoading ? "Creating…" : "Create New Form"}
+      </span>
     </button>
   );
 }

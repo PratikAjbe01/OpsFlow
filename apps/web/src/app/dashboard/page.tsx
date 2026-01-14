@@ -6,16 +6,15 @@ import { useAppSelector } from "@/lib/redux/hooks";
 export default function DashboardPage() {
   const { currentWorkspace } = useAppSelector((state) => state.workspace);
 
-  // If no workspace is selected, show a prompt
   if (!currentWorkspace) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="text-center">
-          <h3 className="text-lg font-medium text-gray-900">
-            No Workspace Selected
+        <div className="rounded-xl border border-border bg-card/50 p-6 text-center">
+          <h3 className="text-base font-semibold tracking-tight">
+            No workspace selected
           </h3>
-          <p className="text-sm text-gray-500">
-            Please select or create a workspace to continue.
+          <p className="mt-1 text-sm text-muted-foreground">
+            Select or create a workspace to get started.
           </p>
         </div>
       </div>
@@ -23,12 +22,18 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight mb-8">
-        {currentWorkspace.name} Overview
-      </h2>
+    <div className="mx-auto max-w-6xl space-y-6">
+      {/* Header */}
+      <div>
+        <h2 className="text-xl font-semibold tracking-tight">
+          {currentWorkspace.name}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Forms overview and activity
+        </p>
+      </div>
 
-      {/* Load the Form List here */}
+      {/* Forms Grid */}
       <FormList />
     </div>
   );
