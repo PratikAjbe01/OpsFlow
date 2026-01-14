@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { createForm, getWorkspaceForms, getFormById } from './form.service';
 import Form from './form.model';
+import { getFormRole } from './forms.utils';
 // Create a new empty form
 export const create = async (req: Request, res: Response) => {
   try {
@@ -56,16 +57,28 @@ export const deleteForm = async (req: Request, res: Response) => {
 };
 export const updateContent = async (req: Request, res: Response) => {
   try {
-    const { content, theme, settings } = req.body; 
+    const { content, theme, settings } = req.body;
     
+    // Debugging Log
+    console.log(`[Update] Checking role for Form: ${req.params.id}, User: ${req.user!._id}`);
+
+    const role = await getFormRole(req.params.id, req.user!._id as string);
+    
+    console.log(`[Update] Resolved Role: ${role}`);
+
+    if (!role || (role !== 'owner' && role !== 'admin' && role !== 'editor')) {
+        return res.status(403).json({ success: false, message: 'Read-only access' });
+    }
+
     const form = await Form.findByIdAndUpdate(
         req.params.id, 
-        { content, theme, settings }, // <--- Save them
+        { content, theme, settings }, 
         { new: true }
     );
     
     res.status(200).json({ success: true, form });
   } catch (error: any) {
+    console.error(error);
     res.status(400).json({ success: false, message: error.message });
   }
 };

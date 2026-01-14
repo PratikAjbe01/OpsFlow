@@ -1,69 +1,73 @@
-'use client';
+"use client";
 
-import { useGetFormsQuery, useDeleteFormMutation } from '@/lib/redux/api/formApi'; // Import delete hook
-import { useAppSelector } from '@/lib/redux/hooks';
-import Link from 'next/link';
-import { Calendar, BarChart, Trash2 } from 'lucide-react';
-import CreateFormBtn from './CreateFormBtn';
+import {
+  useGetFormsQuery,
+  useDeleteFormMutation,
+} from "@/lib/redux/api/formApi";
+import { useAppSelector } from "@/lib/redux/hooks";
+import Link from "next/link";
+import { Calendar, BarChart3, Trash2 } from "lucide-react";
+import CreateFormBtn from "./CreateFormBtn";
+import { cn } from "@/lib/utils";
 
 export default function FormList() {
   const { currentWorkspace } = useAppSelector((state) => state.workspace);
+
   const { data: forms, isLoading } = useGetFormsQuery(
-    currentWorkspace?._id || '', 
+    currentWorkspace?._id || "",
     { skip: !currentWorkspace }
   );
-  
-  // Delete Hook
+
   const [deleteForm] = useDeleteFormMutation();
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
-    e.preventDefault(); // Prevent Link navigation
-    if (confirm('Are you sure you want to delete this form? This cannot be undone.')) {
-        await deleteForm(id);
+    e.preventDefault();
+    if (confirm("Delete this form permanently?")) {
+      await deleteForm(id);
     }
   };
 
   if (!currentWorkspace) return null;
-  if (isLoading) return <div className="mt-8">Loading forms...</div>;
+
+  if (isLoading)
+    return (
+      <div className="mt-8 text-sm text-muted-foreground">Loading forms…</div>
+    );
 
   return (
-    <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      <CreateFormBtn />
+    <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="rounded-xl border-2 border-dashed border-sidebar-primary/40 bg-sidebar-primary/5 p-8 flex items-center justify-center transition hover:bg-sidebar-primary/10 hover:border-sidebar-primary">
+        <CreateFormBtn />
+      </div>
 
       {forms?.map((form) => (
-        <Link 
-          key={form._id} 
+        <Link
+          key={form._id}
           href={`/builder/${form._id}`}
-          className="group relative block rounded-lg bg-white shadow transition hover:shadow-md"
-        >
-          {/* DELETE BUTTON (Top Right) */}
+          className="group relative rounded-xl border border-border bg-card/50 backdrop-blur p-5 transition-colors hover:border-sidebar-primary/40">
+          {/* Delete */}
           <button
             onClick={(e) => handleDelete(e, form._id)}
-            className="absolute top-4 right-4 z-10 p-2 text-gray-400 opacity-0 hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 rounded-full transition-all"
-            title="Delete Form"
-          >
-            <Trash2 className="h-4 w-4" />
+            className="absolute top-3 right-3 p-2 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all"
+            title="Delete form">
+            <Trash2 className="w-4 h-4" />
           </button>
 
-          <div className="p-6">
-            <h3 className="text-lg font-medium text-gray-900 truncate pr-8">
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold tracking-tight truncate pr-6">
               {form.name}
             </h3>
-            {/* ... rest of the card content remains the same ... */}
-             <p className="mt-1 text-sm text-gray-500">
-              {form.isPublished ? (
-                <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Published</span>
-              ) : (
-                <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">Draft</span>
-              )}
-            </p>
-            <div className="mt-6 flex items-center justify-between text-sm text-gray-500">
-              <div className="flex items-center">
-                <BarChart className="mr-1.5 h-4 w-4 text-gray-400" />
+
+            <FormStatus published={form.isPublished} />
+
+            <div className="pt-4 flex items-center justify-between text-xs font-mono text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <BarChart3 className="w-4 h-4" />
                 {form.submissionsCount} submissions
               </div>
-              <div className="flex items-center">
-                <Calendar className="mr-1.5 h-4 w-4 text-gray-400" />
+
+              <div className="flex items-center gap-1.5">
+                <Calendar className="w-4 h-4" />
                 {new Date(form.createdAt).toLocaleDateString()}
               </div>
             </div>
@@ -71,5 +75,35 @@ export default function FormList() {
         </Link>
       ))}
     </div>
+  );
+}
+
+/* ---------------------------------- */
+/* Create Form Tile */
+/* ---------------------------------- */
+
+function CreateFormTile() {
+  return (
+    <div className="rounded-xl border border-dashed border-border bg-secondary/20 p-5 flex items-center justify-center hover:border-sidebar-primary/40 transition">
+      <CreateFormBtn />
+    </div>
+  );
+}
+
+/* ---------------------------------- */
+/* Status Badge */
+/* ---------------------------------- */
+
+function FormStatus({ published }: { published: boolean }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex w-fit items-center px-2.5 py-1 rounded-full border text-xs font-mono",
+        published
+          ? "border-sidebar-primary/30 bg-sidebar-primary/10 text-sidebar-primary"
+          : "border-border bg-secondary/30 text-muted-foreground"
+      )}>
+      {published ? "Published" : "Draft"}
+    </span>
   );
 }
