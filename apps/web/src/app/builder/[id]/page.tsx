@@ -30,30 +30,21 @@ import {
   Share2,
   Mail,
   Lock,
+  Menu,
+  X,
 } from "lucide-react";
 
-/* ------------------ THEME FALLBACK ------------------ */
-
+// Default Theme Fallback
 const defaultTheme = {
-  bgColor: "#f9fafb",
-  cardColor: "#ffffff",
-  textColor: "#1f2937",
-  btnColor: "#2563eb",
-  borderColor: "#e5e7eb",
+  bgColor: "hsl(var(--background))",
+  cardColor: "hsl(var(--card))",
+  textColor: "hsl(var(--foreground))",
+  btnColor: "hsl(var(--sidebar-primary))",
+  borderColor: "hsl(var(--border))",
   borderRadius: "md",
   borderStyle: "thin",
   shadow: "md",
 };
-
-const radiusMap: Record<string, string> = {
-  none: "0px",
-  sm: "0.25rem",
-  md: "0.5rem",
-  lg: "0.75rem",
-  full: "1.5rem",
-};
-
-/* ------------------ PAGE ------------------ */
 
 export default function BuilderPage() {
   const { id } = useParams();
@@ -69,21 +60,17 @@ export default function BuilderPage() {
     selectedFieldId,
     isUnsaved,
   } = useAppSelector((state) => state.builder);
-
   const { currentWorkspace } = useAppSelector((state) => state.workspace);
 
   const [activeTab, setActiveTab] = useState<
-    "design" | "properties" | "responses" | "analytics"
+    "properties" | "design" | "responses" | "analytics"
   >("design");
-
   const [showAI, setShowAI] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
-  /* ------------------ PERMISSIONS ------------------ */
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   let myRole = "viewer";
-
   if (currentWorkspace && user) {
     if (currentWorkspace.ownerId === user.id) {
       myRole = "owner";
@@ -94,37 +81,33 @@ export default function BuilderPage() {
       if (member) myRole = member.role;
     }
   }
-
   if (form?.creatorId === user?.id) myRole = "owner";
 
   const canEdit = ["owner", "admin", "editor"].includes(myRole);
   const canViewData = ["owner", "admin"].includes(myRole);
-
-  /* ------------------ EFFECTS ------------------ */
 
   useEffect(() => {
     if (selectedFieldId) setActiveTab("properties");
   }, [selectedFieldId]);
 
   useEffect(() => {
-    if (!form) return;
-    dispatch(
-      setFields({
-        content: form.content || [],
-        theme: form.theme || defaultTheme,
-        settings: form.settings || {
-          collectEmails: false,
-          limitOneResponse: false,
-        },
-      })
-    );
+    if (form) {
+      dispatch(
+        setFields({
+          content: form.content || [],
+          theme: form.theme || defaultTheme,
+          settings: form.settings || {
+            collectEmails: false,
+            limitOneResponse: false,
+          },
+        })
+      );
+    }
   }, [form, dispatch]);
-
-  /* ------------------ HELPERS ------------------ */
 
   const addManualField = (type: string) => {
     const newField = {
-      id: crypto.randomUUID(),
+      id: Math.random().toString(36).substr(2, 9),
       type,
       label: `New ${type} field`,
       required: false,
@@ -136,10 +119,10 @@ export default function BuilderPage() {
   };
 
   const handleSave = async () => {
-    if (!canEdit) return;
+    if (!canEdit) return alert("Read-only mode");
     setIsSaving(true);
     try {
-      await fetch(`http://localhost:8761/api/forms/${id}/content`, {
+      const res = await fetch(`http://localhost:8761/api/forms/${id}/content`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -151,47 +134,92 @@ export default function BuilderPage() {
           settings,
         }),
       });
+      if (res.ok) alert("Form Saved Successfully!");
+      else throw new Error("Save failed");
+    } catch (err) {
+      alert("Failed to save form.");
     } finally {
       setIsSaving(false);
     }
   };
 
-  if (isLoading) {
+  const getContainerStyles = () => ({
+    backgroundColor: reduxTheme.cardColor || "hsl(var(--card))",
+    color: reduxTheme.textColor || "hsl(var(--foreground))",
+    borderColor: reduxTheme.borderColor || "hsl(var(--border))",
+    borderWidth:
+      reduxTheme.borderStyle === "thin"
+        ? "1px"
+        : reduxTheme.borderStyle === "thick"
+        ? "3px"
+        : reduxTheme.borderStyle === "double"
+        ? "4px"
+        : "0px",
+    borderStyle: reduxTheme.borderStyle === "double" ? "double" : "solid",
+    borderRadius:
+      reduxTheme.borderRadius === "none"
+        ? "0"
+        : reduxTheme.borderRadius === "full"
+        ? "24px"
+        : `var(--radius-${reduxTheme.borderRadius})`,
+    boxShadow:
+      reduxTheme.shadow === "none"
+        ? "none"
+        : reduxTheme.shadow === "sm"
+        ? "0 1px 2px 0 rgb(0 0 0 / 0.05)"
+        : reduxTheme.shadow === "md"
+        ? "0 4px 6px -1px rgb(0 0 0 / 0.1)"
+        : "0 20px 25px -5px rgb(0 0 0 / 0.1)",
+  });
+
+  const radiusMap: any = {
+    none: "0px",
+    sm: "0.25rem",
+    md: "0.5rem",
+    lg: "0.75rem",
+    full: "1.5rem",
+  };
+
+  if (isLoading)
     return (
-      <div className="flex h-screen items-center justify-center text-sm text-muted-foreground">
-        Loading…
+      <div className="p-10 flex items-center justify-center min-h-screen bg-background text-muted-foreground">
+        Loading...
       </div>
     );
-  }
-
-  /* ------------------ RENDER ------------------ */
 
   return (
-    <div className="flex h-screen flex-col bg-muted/40">
-      {/* ------------------ HEADER ------------------ */}
-      <header className="sticky top-0 z-20 h-14 border-b bg-background px-4 sm:px-6 flex items-center justify-between">
-        {/* LEFT */}
-        <div className="flex items-center gap-2 min-w-0">
-          <h1 className="truncate text-sm font-medium text-foreground">
-            {form?.name || "Untitled Form"}
-          </h1>
+    <div className="flex h-screen flex-col bg-background overflow-hidden">
+      {/* HEADER */}
+      <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background px-4 md:px-6 shadow-sm z-20">
+        <div className="flex items-center gap-4">
+          {/* Mobile Menu Button */}
+          <button
+            className="md:hidden p-2 -ml-2 text-muted-foreground"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+            {isMobileMenuOpen ? (
+              <X className="w-5 h-5" />
+            ) : (
+              <Menu className="w-5 h-5" />
+            )}
+          </button>
 
-          {!canEdit && (
-            <span className="flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-              <Lock className="h-3 w-3" />
-              Read only
-            </span>
-          )}
+          <h1 className="text-lg md:text-xl font-bold text-foreground flex items-center font-mono tracking-tighter truncate max-w-[150px] md:max-w-none">
+            {form?.name || "Untitled Form"}
+            {!canEdit && (
+              <span className="hidden md:flex ml-2 text-xs bg-sidebar-primary/20 text-sidebar-primary px-2 py-1 rounded items-center border border-sidebar-primary/30">
+                <Lock className="w-3 h-3 mr-1" /> Read Only
+              </span>
+            )}
+          </h1>
         </div>
 
-        {/* CENTER TABS (Desktop) */}
-        <div className="hidden md:flex items-center gap-1 rounded-lg bg-muted p-1">
+        {/* Desktop Navigation Tabs */}
+        <div className="hidden md:flex items-center space-x-1 bg-secondary/30 p-1 rounded-lg border border-border/30">
           <TabButton
             active={activeTab === "design" || activeTab === "properties"}
             onClick={() => setActiveTab("design")}
             label={!canEdit ? "Preview" : "Editor"}
           />
-
           {canViewData && (
             <>
               <TabButton
@@ -208,25 +236,33 @@ export default function BuilderPage() {
           )}
         </div>
 
-        {/* RIGHT ACTIONS */}
-        <div className="flex items-center gap-2 ">
-          {/* controls here */}
-
-          {/* Settings toggles (desktop only) */}
+        {/* Actions Toolbar */}
+        <div className="flex items-center gap-2 md:gap-3">
           {canEdit && (
-            <div className="hidden lg:flex items-center gap-4 pr-4 border-r">
-              <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition">
+            <div className="hidden lg:flex items-center space-x-4 mr-2 border-r border-border/30 pr-4 h-8">
+              <label className="flex items-center text-xs font-medium text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 rounded border-muted-foreground/40 text-violet-600 focus:ring-violet-500"
+                  checked={settings.collectEmails}
+                  onChange={(e) =>
+                    dispatch(
+                      updateSettings({ collectEmails: e.target.checked })
+                    )
+                  }
+                  className="mr-2 rounded border-input"
                 />
                 Collect Emails
               </label>
-
-              <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition">
+              <label className="flex items-center text-xs font-medium text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 rounded border-muted-foreground/40 text-violet-600 focus:ring-violet-500"
+                  checked={settings.limitOneResponse}
+                  onChange={(e) =>
+                    dispatch(
+                      updateSettings({ limitOneResponse: e.target.checked })
+                    )
+                  }
+                  className="mr-2 rounded border-input"
                 />
                 Limit 1
               </label>
@@ -234,190 +270,337 @@ export default function BuilderPage() {
           )}
 
           {canEdit && (
-            <button
-              onClick={() => setShowAI(true)}
-              className="flex items-center gap-2 rounded-lg bg-violet-500/10 px-3 py-2 text-sm font-medium text-violet-700 hover:bg-violet-500/20 transition">
-              <Sparkles className="h-4 w-4" />
-              AI
-            </button>
-          )}
-
-          {canEdit && (
-            <button
-              onClick={handleSave}
-              disabled={!isUnsaved || isSaving}
-              className="flex items-center gap-2 rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background hover:bg-foreground/90 transition disabled:opacity-50">
-              {isSaving ? "Saving…" : "Save"}
-            </button>
+            <>
+              <button
+                onClick={() => setShowAI(true)}
+                className="hidden md:flex items-center rounded-lg bg-chart-3/10 px-3 py-2 text-xs md:text-sm font-medium text-chart-3 hover:bg-chart-3/20 border border-chart-3/20 transition-all whitespace-nowrap">
+                <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                AI Magic
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={!isUnsaved && !isSaving}
+                className="flex items-center rounded-lg bg-sidebar-primary px-3 md:px-4 py-2 text-xs md:text-sm font-medium text-sidebar-primary-foreground hover:bg-sidebar-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm whitespace-nowrap">
+                <Save className="mr-1.5 h-3.5 w-3.5" />{" "}
+                {isSaving ? "Saving" : "Save"}
+              </button>
+            </>
           )}
 
           <button
             onClick={() => setShowShare(true)}
-            className="flex items-center gap-2 rounded-lg border border-muted-foreground/30 bg-background px-3 py-2 text-sm font-medium text-foreground hover:bg-muted transition">
-            <Share2 className="h-4 w-4" />
+            className="flex items-center rounded-lg bg-secondary px-3 md:px-4 py-2 text-xs md:text-sm font-medium text-secondary-foreground hover:bg-secondary/80 border border-border transition-all whitespace-nowrap">
+            <Share2 className="mr-1.5 h-3.5 w-3.5" />{" "}
+            <span className="hidden sm:inline">Share</span>
           </button>
         </div>
       </header>
-      {canViewData && (
-        <div className="md:hidden border-b bg-background">
-          <div className="flex">
-            <MobileTab
-              active={activeTab === "design" || activeTab === "properties"}
-              onClick={() => setActiveTab("design")}
-              label={!canEdit ? "Preview" : "Editor"}
-            />
-            <MobileTab
-              active={activeTab === "responses"}
-              onClick={() => setActiveTab("responses")}
-              label="Responses"
-            />
-            <MobileTab
-              active={activeTab === "analytics"}
-              onClick={() => setActiveTab("analytics")}
-              label="Analytics"
-            />
+
+      {/* MOBILE NAV DROPDOWN (Visible only on small screens) */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden absolute top-16 left-0 right-0 bg-background border-b border-border z-30 p-4 shadow-xl animate-accordion-down">
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => {
+                setActiveTab("design");
+                setIsMobileMenuOpen(false);
+              }}
+              className="text-left px-4 py-3 rounded-lg hover:bg-secondary">
+              Editor
+            </button>
+            {canViewData && (
+              <>
+                <button
+                  onClick={() => {
+                    setActiveTab("responses");
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="text-left px-4 py-3 rounded-lg hover:bg-secondary">
+                  Responses
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab("analytics");
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="text-left px-4 py-3 rounded-lg hover:bg-secondary">
+                  Analytics
+                </button>
+              </>
+            )}
+            {canEdit && (
+              <div className="border-t border-border mt-2 pt-3 px-4 space-y-3">
+                <label className="flex items-center text-sm">
+                  <input
+                    type="checkbox"
+                    checked={settings.collectEmails}
+                    onChange={(e) =>
+                      dispatch(
+                        updateSettings({ collectEmails: e.target.checked })
+                      )
+                    }
+                    className="mr-2"
+                  />{" "}
+                  Collect Emails
+                </label>
+                <label className="flex items-center text-sm">
+                  <input
+                    type="checkbox"
+                    checked={settings.limitOneResponse}
+                    onChange={(e) =>
+                      dispatch(
+                        updateSettings({ limitOneResponse: e.target.checked })
+                      )
+                    }
+                    className="mr-2"
+                  />{" "}
+                  Limit 1 Response
+                </label>
+                <button
+                  onClick={() => setShowAI(true)}
+                  className="hidden md:flex items-center rounded-lg bg-secondary px-3 py-2 text-xs md:text-sm font-medium text-foreground hover:bg-foreground hover:text-background border border-border transition-all whitespace-nowrap">
+                  <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                  AI Agent
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* ------------------ MAIN ------------------ */}
-      {activeTab === "responses" && canViewData ? (
-        <ResponsesPanel formId={id as string} />
-      ) : activeTab === "analytics" && canViewData ? (
-        <AnalyticsPanel formId={id as string} />
-      ) : (
-        <div className="flex flex-1 overflow-hidden">
-          {/* TOOLBOX */}
-          {canEdit && (
-            <aside className="hidden md:block w-60 border-r bg-background p-3">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-3">
-                Toolbox
-              </p>
-              <div className="space-y-1">
-                <ToolboxBtn
-                  icon={Type}
-                  label="Text Input"
-                  onClick={() => addManualField("text")}
-                />
-                <ToolboxBtn
-                  icon={Hash}
-                  label="Number Input"
-                  onClick={() => addManualField("number")}
-                />
-                <ToolboxBtn
-                  icon={List}
-                  label="Dropdown"
-                  onClick={() => addManualField("select")}
-                />
-                <ToolboxBtn
-                  icon={CheckSquare}
-                  label="Checkbox"
-                  onClick={() => addManualField("checkbox")}
-                />
-                <ToolboxBtn
-                  icon={Type}
-                  label="Text Area"
-                  onClick={() => addManualField("textarea")}
-                />
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {activeTab === "responses" && id && canViewData ? (
+          <div className="w-full h-full overflow-y-auto bg-background">
+            <ResponsesPanel formId={id as string} />
+          </div>
+        ) : activeTab === "analytics" && id && canViewData ? (
+          <div className="w-full h-full overflow-y-auto bg-background">
+            <AnalyticsPanel formId={id as string} />
+          </div>
+        ) : (
+          /* BUILDER LAYOUT */
+          <>
+            {/* LEFT TOOLBOX (Hidden on Mobile, Visible on Desktop) */}
+            {canEdit && (
+              <div className="hidden lg:flex w-64 flex-col border-r border-border bg-background p-4 overflow-y-auto shrink-0">
+                <h3 className="font-semibold text-muted-foreground uppercase text-xs mb-4 tracking-widest pl-1">
+                  Toolbox
+                </h3>
+                <div className="space-y-3">
+                  <ToolboxBtn
+                    icon={Type}
+                    label="Text Input"
+                    onClick={() => addManualField("text")}
+                  />
+                  <ToolboxBtn
+                    icon={Hash}
+                    label="Number Input"
+                    onClick={() => addManualField("number")}
+                  />
+                  <ToolboxBtn
+                    icon={List}
+                    label="Dropdown"
+                    onClick={() => addManualField("select")}
+                  />
+                  <ToolboxBtn
+                    icon={CheckSquare}
+                    label="Checkbox"
+                    onClick={() => addManualField("checkbox")}
+                  />
+                  <ToolboxBtn
+                    icon={Type}
+                    label="Text Area"
+                    onClick={() => addManualField("textarea")}
+                  />
+                </div>
               </div>
-            </aside>
-          )}
+            )}
 
-          {/* CANVAS */}
-          <main
-            className="flex-1 overflow-y-auto px-4 sm:px-10 py-8"
-            style={{ backgroundColor: reduxTheme.bgColor }}
-            onClick={() => {
-              dispatch(selectField(null));
-              setActiveTab("design");
-            }}>
+            {/* CENTER CANVAS */}
             <div
-              className="mx-auto max-w-xl p-8"
+              className="flex-1 overflow-y-auto bg-secondary/10 p-4 md:p-8 lg:p-12 transition-colors duration-300 relative"
               style={{
-                backgroundColor: reduxTheme.cardColor,
-                borderRadius: radiusMap[reduxTheme.borderRadius],
-                color: reduxTheme.textColor,
+                backgroundColor: reduxTheme.bgColor || "hsl(var(--background))",
               }}
-              onClick={(e) => e.stopPropagation()}>
-              <div className="space-y-6">
-                {fields.length === 0 && (
-                  <div className="text-center py-16 text-sm text-muted-foreground">
-                    Add fields from the toolbox
-                  </div>
-                )}
+              onClick={() => {
+                if (canEdit) {
+                  dispatch(selectField(null));
+                  setActiveTab("design");
+                }
+              }}>
+              <div
+                className="mx-auto w-full max-w-2xl min-h-[400px] md:min-h-[600px] p-6 md:p-10 transition-all duration-300 relative border shadow-sm"
+                style={{
+                  ...getContainerStyles(),
+                  borderRadius: radiusMap[reduxTheme.borderRadius],
+                }}
+                onClick={(e) => e.stopPropagation()}>
+                <div className="space-y-6">
+                  {/* Form Title */}
+                  <h1
+                    className="text-2xl md:text-3xl font-bold border-b pb-4 mb-6 tracking-tighter break-words"
+                    style={{
+                      borderColor:
+                        (reduxTheme.textColor || "hsl(var(--foreground))") +
+                        "33",
+                      color: reduxTheme.textColor || "hsl(var(--foreground))",
+                    }}>
+                    {form?.name || "Untitled Form"}
+                  </h1>
 
-                {fields.map((field: any) => (
-                  <div
-                    key={field.id}
-                    onClick={() => dispatch(selectField(field.id))}
-                    className={`relative group rounded-md p-4 ${
-                      selectedFieldId === field.id
-                        ? "ring-2 ring-foreground/20"
-                        : "hover:bg-muted/50"
-                    }`}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        dispatch(removeField(field.id));
-                      }}
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                  {/* Email Warning */}
+                  {settings.collectEmails && (
+                    <div className="border-b pb-6 mb-6 border-dashed border-border/50">
+                      <div className="rounded-lg border border-border bg-secondary/20 p-4">
+                        <label className="block text-sm font-medium text-foreground mb-1">
+                          Email Address{" "}
+                          <span className="text-destructive">*</span>
+                        </label>
+                        <div className="flex items-center text-muted-foreground text-sm">
+                          <Mail className="w-4 h-4 mr-2" />
+                          <span>Valid email required</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-                    <label className="block text-sm font-medium mb-1">
-                      {field.label}
-                      {field.required && (
-                        <span className="text-red-500">*</span>
+                  {/* Empty State */}
+                  {fields.length === 0 ? (
+                    <div className="text-center py-16 md:py-24 opacity-50 border-2 border-dashed border-border rounded-lg bg-background/50">
+                      <p className="text-foreground font-medium">
+                        Your form is empty.
+                      </p>
+                      {canEdit && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Select tools from the sidebar to add fields.
+                        </p>
                       )}
-                    </label>
+                    </div>
+                  ) : (
+                    /* Fields Loop */
+                    fields.map((field: any) => (
+                      <div
+                        key={field.id}
+                        onClick={(e) => {
+                          if (canEdit) {
+                            e.stopPropagation();
+                            dispatch(selectField(field.id));
+                          }
+                        }}
+                        className={`group relative rounded-lg border p-4 md:p-5 transition-all ${
+                          canEdit ? "cursor-pointer" : ""
+                        } ${
+                          selectedFieldId === field.id && canEdit
+                            ? "border-sidebar-primary ring-1 ring-sidebar-primary bg-sidebar-primary/5"
+                            : "border-transparent hover:border-border hover:bg-secondary/30"
+                        }`}>
+                        {/* Delete Button (Desktop Hover / Mobile Always Visible if Selected) */}
+                        {canEdit && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              dispatch(removeField(field.id));
+                            }}
+                            className={`absolute top-2 right-2 p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all ${
+                              selectedFieldId === field.id
+                                ? "opacity-100"
+                                : "opacity-0 group-hover:opacity-100"
+                            }`}>
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
 
-                    <input
-                      disabled
-                      className="w-full rounded-md border p-2 text-sm"
-                    />
-                  </div>
-                ))}
+                        <label
+                          className="block text-sm font-medium mb-2 pointer-events-none break-words"
+                          style={{
+                            color:
+                              reduxTheme.textColor || "hsl(var(--foreground))",
+                          }}>
+                          {field.label}{" "}
+                          {field.required && (
+                            <span className="text-destructive">*</span>
+                          )}
+                        </label>
+
+                        <div className="pointer-events-none opacity-90">
+                          {field.type === "textarea" ? (
+                            <textarea
+                              className="w-full rounded-lg border border-border p-3 h-24 bg-background/50 text-foreground resize-none"
+                              disabled
+                            />
+                          ) : field.type === "select" ? (
+                            <select
+                              className="w-full rounded-lg border border-border p-2.5 bg-background/50 text-foreground"
+                              disabled>
+                              <option>Select Option...</option>
+                            </select>
+                          ) : (
+                            <input
+                              type="text"
+                              className="w-full rounded-lg border border-border p-2.5 bg-background/50 text-foreground"
+                              disabled
+                            />
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+
+                  {/* Submit Button Preview */}
+                  {fields.length > 0 && (
+                    <div
+                      className="pt-6 border-t mt-8"
+                      style={{ borderColor: reduxTheme.borderColor }}>
+                      <button
+                        className="w-full md:w-auto px-8 py-3 text-sidebar-primary-foreground font-medium rounded-lg transition-all shadow-sm hover:opacity-90"
+                        style={{
+                          backgroundColor: reduxTheme.btnColor,
+                          borderRadius: radiusMap[reduxTheme.borderRadius],
+                        }}>
+                        Submit Application
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </main>
 
-          {/* RIGHT PANEL */}
-          {canEdit && (
-            <aside className="hidden lg:flex w-80 border-l bg-background flex-col">
-              <div className="flex border-b">
-                <button
-                  onClick={() => setActiveTab("properties")}
-                  className={`flex-1 py-3 text-sm ${
-                    activeTab === "properties"
-                      ? "border-b-2 border-foreground"
-                      : "text-muted-foreground"
-                  }`}>
-                  <Settings className="h-4 w-4 inline mr-2" />
-                  Fields
-                </button>
-                <button
-                  onClick={() => setActiveTab("design")}
-                  className={`flex-1 py-3 text-sm ${
-                    activeTab === "design"
-                      ? "border-b-2 border-foreground"
-                      : "text-muted-foreground"
-                  }`}>
-                  <Paintbrush className="h-4 w-4 inline mr-2" />
-                  Design
-                </button>
+            {/* RIGHT SIDEBAR (Desktop Only - Tabs for Properties/Design) */}
+            {canEdit && (
+              <div className="hidden lg:flex w-80 border-l border-border bg-background flex-col h-full shadow-lg z-10 shrink-0">
+                <div className="flex border-b border-border bg-secondary/10">
+                  <button
+                    onClick={() => setActiveTab("properties")}
+                    className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+                      activeTab === "properties"
+                        ? "text-sidebar-primary border-b-2 border-sidebar-primary bg-background"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/20"
+                    }`}>
+                    <Settings className="w-4 h-4" /> Fields
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("design")}
+                    className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+                      activeTab === "design"
+                        ? "text-sidebar-primary border-b-2 border-sidebar-primary bg-background"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/20"
+                    }`}>
+                    <Paintbrush className="w-4 h-4" /> Design
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  {activeTab === "properties" ? (
+                    <PropertiesPanel />
+                  ) : (
+                    <DesignPanel />
+                  )}
+                </div>
               </div>
-
-              <div className="flex-1 overflow-y-auto">
-                {activeTab === "properties" ? (
-                  <PropertiesPanel />
-                ) : (
-                  <DesignPanel />
-                )}
-              </div>
-            </aside>
-          )}
-        </div>
-      )}
+            )}
+          </>
+        )}
+      </div>
 
       {showAI && <AiGeneratorModal onClose={() => setShowAI(false)} />}
       {showShare && (
@@ -427,14 +610,16 @@ export default function BuilderPage() {
   );
 }
 
-/* ------------------ TOOLBOX BUTTON ------------------ */
+// ----------------------------------------------------------------------
+// Helper Components for Cleaner Code
+// ----------------------------------------------------------------------
 
 function ToolboxBtn({ icon: Icon, label, onClick }: any) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition">
-      <Icon className="h-4 w-4" />
+      className="flex w-full items-center px-4 py-3 text-sm font-medium text-foreground bg-card hover:bg-secondary/50 border border-border/60 hover:border-sidebar-primary/40 rounded-lg hover:text-sidebar-primary transition-all shadow-sm group">
+      <Icon className="mr-3 h-4 w-4 text-muted-foreground group-hover:text-sidebar-primary transition-colors" />
       {label}
     </button>
   );
@@ -452,32 +637,10 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-1.5 text-sm rounded-md transition ${
+      className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
         active
-          ? "bg-background text-foreground shadow-sm"
-          : "text-muted-foreground hover:text-foreground"
-      }`}>
-      {label}
-    </button>
-  );
-}
-
-function MobileTab({
-  active,
-  onClick,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex-1 py-2 text-sm ${
-        active
-          ? "border-b-2 border-foreground text-foreground"
-          : "text-muted-foreground"
+          ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+          : "text-muted-foreground hover:text-foreground hover:bg-background/50"
       }`}>
       {label}
     </button>
