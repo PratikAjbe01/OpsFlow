@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useLayoutEffect } from "react";
 import { useAppSelector } from "@/lib/redux/hooks";
+import gsap from "gsap";
 import {
   Loader2,
   Sparkles,
@@ -9,29 +10,66 @@ import {
   AlertTriangle,
   CheckCircle,
   Info,
+  Users,
+  Activity,
 } from "lucide-react";
 import {
-  BarChart,
-  Bar,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  CartesianGrid,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
 } from "recharts";
+import { cn } from "@/lib/utils";
+
+/* ---------------- Chart Colors (semantic, reused everywhere) ---------------- */
+const CHART_COLORS = [
+  "oklch(0.646 0.222 41.116)", // primary / trend
+  "oklch(0.6 0.118 184.704)", // positive
+  "oklch(0.828 0.189 84.429)", // warning
+  "oklch(0.398 0.07 227.392)", // neutral
+];
+
+/* ---------------- Insight helpers ---------------- */
+const insightStyles: Record<string, string> = {
+  positive: "border-chart-2/30 bg-chart-2/5",
+  warning: "border-chart-3/30 bg-chart-3/5",
+  trend: "border-chart-1/30 bg-chart-1/5",
+};
+
+const insightIcon = (type: string) => {
+  if (type === "positive") return <CheckCircle className="w-5 h-5" />;
+  if (type === "warning") return <AlertTriangle className="w-5 h-5" />;
+  if (type === "trend") return <TrendingUp className="w-5 h-5" />;
+  return <Info className="w-5 h-5" />;
+};
+
+/* ---------------- Chart decision logic ---------------- */
+const getChartType = (field: any, length: number) => {
+  if (field.type === "checkbox") return "bar";
+  if (["select", "radio"].includes(field.type) && length <= 5) return "pie";
+  return "bar";
+};
 
 export default function AnalyticsPanel({ formId }: { formId: string }) {
-  const { accessToken } = useAppSelector((state) => state.auth);
-  const { fields } = useAppSelector((state) => state.builder);
+  const { accessToken } = useAppSelector((s) => s.auth);
+  const { fields } = useAppSelector((s) => s.builder);
+
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
-  const [insights, setInsights] = useState<any[]>([]); // <--- Changed from string to Array
+  const [insights, setInsights] = useState<any[]>([]);
 
-  // 1. Fetch Chart Data (Same as before)
+  /* ---------------- Fetch analytics ---------------- */
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
@@ -43,8 +81,6 @@ export default function AnalyticsPanel({ formId }: { formId: string }) {
         );
         const json = await res.json();
         if (json.success) setData(json);
-      } catch (err) {
-        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -52,7 +88,7 @@ export default function AnalyticsPanel({ formId }: { formId: string }) {
     if (formId) fetchAnalytics();
   }, [formId, accessToken]);
 
-  // 2. Fetch AI Insight (Updated to expect JSON)
+  /* ---------------- AI insight ---------------- */
   const handleAiAnalyze = async () => {
     setAiLoading(true);
     try {
@@ -63,211 +99,253 @@ export default function AnalyticsPanel({ formId }: { formId: string }) {
         }
       );
       const json = await res.json();
-      if (json.success) setInsights(json.insights); // Store array
-    } catch (err) {
-      alert("AI Analysis failed");
+      if (json.success) setInsights(json.insights);
     } finally {
       setAiLoading(false);
     }
   };
 
-  // Helper to render icon based on insight type
-  const getInsightIcon = (type: string) => {
-    switch (type) {
-      case "warning":
-        return <AlertTriangle className="w-5 h-5 text-amber-500" />;
-      case "positive":
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case "trend":
-        return <TrendingUp className="w-5 h-5 text-blue-500" />;
-      default:
-        return <Info className="w-5 h-5 text-purple-500" />;
-    }
-  };
+  /* ---------------- Animations ---------------- */
+  useLayoutEffect(() => {
+    if (loading) return;
 
-  const getInsightColor = (type: string) => {
-    switch (type) {
-      case "warning":
-        return "bg-amber-50 border-amber-100";
-      case "positive":
-        return "bg-green-50 border-green-100";
-      case "trend":
-        return "bg-blue-50 border-blue-100";
-      default:
-        return "bg-purple-50 border-purple-100";
-    }
-  };
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        "[data-animate]",
+        { y: 40, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          stagger: 0.12,
+          duration: 0.6,
+          ease: "power2.out",
+        }
+      );
+    }, containerRef);
 
-  if (loading)
+    return () => ctx.revert();
+  }, [loading]);
+
+  /* ---------------- Loading ---------------- */
+  if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Loader2 className="animate-spin text-blue-500" />
+        <Loader2 className="animate-spin text-muted-foreground" />
       </div>
     );
+  }
 
   return (
-    <div className="h-full overflow-auto bg-gray-50 p-8">
-      {/* Header Stats & AI */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        {/* Stats Card */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center">
-          <h3 className="text-gray-500 text-sm font-medium">Total Responses</h3>
-          <p className="text-5xl font-bold text-gray-900 mt-2">
-            {data?.total || 0}
-          </p>
-        </div>
+    <div
+      ref={containerRef}
+      className="min-h-screen bg-background p-8 text-foreground">
+      {/* ---------------- Header ---------------- */}
+      <div className="mb-10" data-animate>
+        <h1 className="text-4xl font-bold tracking-tight">Form Analytics</h1>
+        <p className="text-muted-foreground mt-2">
+          Real-time insights and AI-powered analysis
+        </p>
+      </div>
 
-        {/* AI Insight Section (Spans 2 columns) */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-gray-800 font-bold flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-purple-600 fill-purple-100" />
-              AI Analysis
-            </h3>
-            {insights.length === 0 && (
-              <button
-                onClick={handleAiAnalyze}
-                disabled={aiLoading}
-                className="text-xs bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-black disabled:opacity-50 flex items-center gap-2 transition-all">
-                {aiLoading ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <Sparkles className="w-3 h-3" />
-                )}
-                Generate Report
-              </button>
-            )}
+      {/* ---------------- Stats ---------------- */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8" data-animate>
+        {[
+          {
+            label: "Total Responses",
+            value: data?.total || 0,
+            icon: Users,
+            color: "text-chart-1",
+          },
+          {
+            label: "Completion Rate",
+            value: `${data?.completionRate || 0}%`,
+            icon: CheckCircle,
+            color: "text-chart-2",
+          },
+          {
+            label: "Avg Time",
+            value: data?.avgTime || "-",
+            icon: Activity,
+            color: "text-chart-4",
+          },
+        ].map((stat, i) => (
+          <div
+            key={i}
+            className="rounded-xl border border-border bg-card/50 backdrop-blur p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <stat.icon className={cn("w-5 h-5", stat.color)} />
+              <span className="text-sm text-muted-foreground">
+                {stat.label}
+              </span>
+            </div>
+            <div className={cn("text-3xl font-bold", stat.color)}>
+              {stat.value}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ---------------- AI Insights ---------------- */}
+      <div
+        className="rounded-xl border border-border bg-card/50 p-6 mb-10"
+        data-animate>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <Sparkles className="text-sidebar-primary" />
+            <h3 className="text-lg font-bold">AI Analysis</h3>
           </div>
 
-          {/* INSIGHT CARDS RENDERER */}
-          {insights.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {insights.map((insight, idx) => (
-                <div
-                  key={idx}
-                  className={`p-4 rounded-lg border ${getInsightColor(
-                    insight.type
-                  )}`}>
-                  <div className="mb-2">{getInsightIcon(insight.type)}</div>
-                  <h4 className="font-bold text-gray-900 text-sm mb-1">
-                    {insight.title}
-                  </h4>
-                  <p className="text-xs text-gray-600 leading-relaxed">
-                    {insight.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-              <p className="text-sm text-gray-500">
-                {aiLoading
-                  ? "Analyzing data patterns..."
-                  : "Click 'Generate Report' to get AI-powered insights."}
-              </p>
-            </div>
+          {insights.length === 0 && (
+            <button
+              onClick={handleAiAnalyze}
+              disabled={aiLoading}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-sidebar-primary text-sidebar-primary-foreground text-sm font-semibold">
+              {aiLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+              Generate Report
+            </button>
           )}
+        </div>
+
+        {insights.length > 0 ? (
+          <div className="grid md:grid-cols-3 gap-4">
+            {insights.map((i, idx) => (
+              <div
+                key={idx}
+                className={cn(
+                  "rounded-xl border p-5 transition hover:scale-[1.02]",
+                  insightStyles[i.type]
+                )}>
+                <div className="mb-2">{insightIcon(i.type)}</div>
+                <h4 className="font-semibold mb-1">{i.title}</h4>
+                <p className="text-sm text-muted-foreground">{i.description}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="border border-dashed border-border rounded-lg p-10 text-center text-muted-foreground">
+            {aiLoading
+              ? "Analyzing patterns in your data…"
+              : "Generate AI insights from real responses"}
+          </div>
+        )}
+      </div>
+
+      {/* ---------------- Submission Trend (Smooth Area) ---------------- */}
+      <div
+        className="rounded-xl border border-border bg-card/50 p-6 mb-10"
+        data-animate>
+        <h3 className="font-semibold mb-4 flex items-center gap-2">
+          <TrendingUp className="text-chart-1" />
+          Submission Activity
+        </h3>
+
+        <div className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data?.lineChartData || []}>
+              <defs>
+                <linearGradient
+                  id="submissionGradient"
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1">
+                  <stop
+                    offset="5%"
+                    stopColor={CHART_COLORS[0]}
+                    stopOpacity={0.35}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor={CHART_COLORS[0]}
+                    stopOpacity={0}
+                  />
+                </linearGradient>
+              </defs>
+
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Area
+                type="monotone"
+                dataKey="count"
+                stroke={CHART_COLORS[0]}
+                strokeWidth={3}
+                fill="url(#submissionGradient)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Charts Grid (Same as before) */}
-      <div className="space-y-8">
-        {/* ... Keep your existing Recharts code here ... */}
-        {/* If you need me to paste the chart code again, let me know! */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <h3 className="font-semibold text-gray-800 mb-6 flex items-center">
-            <TrendingUp className="w-4 h-4 mr-2" /> Submission Activity
-          </h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data?.lineChartData || []}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  vertical={false}
-                  stroke="#f0f0f0"
-                />
-                <XAxis
-                  dataKey="date"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#9ca3af", fontSize: 12 }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#9ca3af", fontSize: 12 }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: "8px",
-                    border: "none",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="count"
-                  stroke="#2563eb"
-                  strokeWidth={3}
-                  dot={{
-                    r: 4,
-                    fill: "#2563eb",
-                    strokeWidth: 2,
-                    stroke: "#fff",
-                  }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+      {/* ---------------- Field Distributions ---------------- */}
+      <div className="grid md:grid-cols-2 gap-6">
+        {fields.map((field: any) => {
+          if (!["select", "radio", "checkbox"].includes(field.type))
+            return null;
 
-        {/* Categorical Distributions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {fields.map((field: any) => {
-            if (!["select", "radio", "checkbox"].includes(field.type))
-              return null;
-            const chartData = data?.distribution[field.id] || [];
-            if (chartData.length === 0) return null;
+          const chartData = data?.distribution[field.id] || [];
+          if (!chartData.length) return null;
 
-            return (
-              <div
-                key={field.id}
-                className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <h3
-                  className="font-semibold text-gray-800 mb-4 text-sm truncate"
-                  title={field.label}>
-                  {field.label}
-                </h3>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
+          const chartType = getChartType(field, chartData.length);
+
+          return (
+            <div
+              key={field.id}
+              className="rounded-xl border border-border bg-card/50 p-6"
+              data-animate>
+              <h4 className="font-semibold mb-4 truncate" title={field.label}>
+                {field.label}
+              </h4>
+
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  {chartType === "pie" ? (
+                    <PieChart>
+                      <Pie
+                        data={chartData}
+                        dataKey="value"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={4}>
+                        {chartData.map((_: any, i: number) => (
+                          <Cell
+                            key={i}
+                            fill={CHART_COLORS[i % CHART_COLORS.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  ) : (
                     <BarChart data={chartData} layout="vertical">
                       <CartesianGrid
                         strokeDasharray="3 3"
-                        horizontal={true}
+                        horizontal
                         vertical={false}
-                        stroke="#f0f0f0"
                       />
                       <XAxis type="number" hide />
-                      <YAxis
-                        dataKey="name"
-                        type="category"
-                        width={100}
-                        tick={{ fontSize: 11 }}
-                      />
-                      <Tooltip cursor={{ fill: "transparent" }} />
-                      <Bar
-                        dataKey="value"
-                        fill="#8884d8"
-                        radius={[0, 4, 4, 0]}
-                        barSize={20}
-                      />
+                      <YAxis type="category" dataKey="name" width={90} />
+                      <Tooltip />
+                      <Bar dataKey="value" radius={[0, 6, 6, 0]}>
+                        {chartData.map((_: any, i: number) => (
+                          <Cell
+                            key={i}
+                            fill={CHART_COLORS[i % CHART_COLORS.length]}
+                          />
+                        ))}
+                      </Bar>
                     </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                  )}
+                </ResponsiveContainer>
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

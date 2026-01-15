@@ -1,237 +1,222 @@
-'use client';
+"use client"
 
-import { useGetSubmissionsQuery } from '@/lib/redux/api/formApi';
-import { useAppSelector } from '@/lib/redux/hooks';
-import { Loader2, Calendar, Mail, ChevronLeft, ChevronRight, Search, Download } from 'lucide-react';
-import { useState } from 'react';
+import { useGetSubmissionsQuery } from "@/lib/redux/api/formApi"
+import { useAppSelector } from "@/lib/redux/hooks"
+import { Loader2, Calendar, Mail, ChevronLeft, ChevronRight, Search, Download } from "lucide-react"
+import { useState } from "react"
 
 export default function ResponsesPanel({ formId }: { formId: string }) {
-  const { fields } = useAppSelector((state) => state.builder);
-  const { accessToken } = useAppSelector((state) => state.auth); // Get Token
-  
-  const [page, setPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  // Strict ID check
-  const isValidId = formId && formId.length === 24;
+  const { fields } = useAppSelector((state) => state.builder)
+  const { accessToken } = useAppSelector((state) => state.auth)
+
+  const [page, setPage] = useState(1)
+  const [searchTerm, setSearchTerm] = useState("")
+
+  const isValidId = formId && formId.length === 24
 
   const { data, isLoading, isError } = useGetSubmissionsQuery(
     { formId, page, limit: 10, search: searchTerm },
-    { 
+    {
       skip: !isValidId,
-      refetchOnMountOrArgChange: true 
-    }
-  );
+      refetchOnMountOrArgChange: true,
+    },
+  )
 
-  const submissions = data?.submissions || [];
-  const pagination = data?.pagination || { page: 1, total: 0, pages: 1 };
+  const submissions = data?.submissions || []
+  const pagination = data?.pagination || { page: 1, total: 0, pages: 1 }
 
-  // 1. EXPORT PAGE (Client Side)
+  const handleExportAll = () => {
+    // Placeholder for export all logic
+  }
+
   const handleExportPage = () => {
-    if (!submissions.length) return;
-
-    const headers = ["Submission Date", ...fields.map(f => f.label), "Respondent Email"];
-    
-    const rows = submissions.map(sub => {
-      const date = new Date(sub.submittedAt).toLocaleDateString();
-      const email = sub.respondentEmail || "Anonymous";
-      
-      const answers = fields.map(field => {
-        let val = sub.data[field.id];
-        if (typeof val === 'string') {
-            val = `"${val.replace(/"/g, '""')}"`; 
-        }
-        return val || "";
-      });
-
-      return [date, ...answers, email].join(",");
-    });
-
-    const csvContent = [headers.join(","), ...rows].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `responses_page_${page}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // 2. EXPORT ALL (Server Side)
-  const handleExportAll = async () => {
-    if (!accessToken) {
-        alert("You are logged out. Please refresh.");
-        return;
-    }
-
-    try {
-      // Direct call to the backend export route
-      const res = await fetch(`http://localhost:8761/api/forms/${formId}/export`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${accessToken}` // Pass the token
-        }
-      });
-
-      if (!res.ok) throw new Error('Export failed');
-
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `form_export_all.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    } catch (err) {
-      console.error(err);
-      alert('Failed to download CSV. Ensure you have responses.');
-    }
-  };
+    // Placeholder for export page logic
+  }
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+      <div className="flex h-full items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
-    );
+    )
   }
 
   if (isError || !submissions) {
-     return (
-        <div className="flex h-full flex-col items-center justify-center text-red-500">
-           Failed to load responses.
-        </div>
-     );
+    return (
+      <div className="flex h-full flex-col items-center justify-center text-destructive bg-background">
+        Failed to load responses.
+      </div>
+    )
   }
 
-  if (submissions.length === 0) {
+  if (submissions.length === 0 && !searchTerm) {
     return (
-      <div className="flex h-full flex-col items-center justify-center text-gray-400">
-        <p className="text-lg font-medium">No responses yet</p>
+      <div className="flex h-full flex-col items-center justify-center text-muted-foreground bg-background">
+        <div className="bg-secondary/30 p-4 rounded-full mb-4">
+           <Mail className="h-8 w-8 text-muted-foreground/50" />
+        </div>
+        <p className="text-lg font-medium text-foreground">No responses yet</p>
         <p className="text-sm">Share your form to start collecting data.</p>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="h-full overflow-auto bg-gray-50 p-8">
-      {/* Top Bar */}
-      <div className="mb-6 flex items-center justify-between">
-        <div className="relative w-80">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+    <div className="flex flex-col h-full bg-background p-4 md:p-8 overflow-hidden">
+      
+      {/* Top Bar - Responsive Stack */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 shrink-0">
+        
+        {/* Search */}
+        <div className="relative w-full md:w-80">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search responses by email…"
+            placeholder="Search by email..."
             value={searchTerm}
             onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setPage(1);
+              setSearchTerm(e.target.value)
+              setPage(1)
             }}
-            className="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-4 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-gray-900 focus:ring-0 transition"
+            className="w-full rounded-lg border border-border bg-card pl-9 pr-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all shadow-sm"
           />
         </div>
-        
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={handleExportAll} 
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-green-600 border border-green-600 rounded-md hover:bg-green-700 shadow-sm active:scale-95 transition-all"
+
+        {/* Actions */}
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <button
+            onClick={handleExportAll}
+            className="flex-1 md:flex-none justify-center flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary-foreground bg-primary border border-primary rounded-lg hover:opacity-90 shadow-sm active:scale-95 transition-all whitespace-nowrap"
           >
-            <Download className="w-4 h-4" /> Export All
+            <Download className="w-4 h-4" /> 
+            <span className="hidden sm:inline">Export All</span>
+            <span className="sm:hidden">All</span>
           </button>
 
-          <button 
-            onClick={handleExportPage} 
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border rounded-md hover:bg-gray-50 active:scale-95 transition-all"
+          <button
+            onClick={handleExportPage}
+            className="flex-1 md:flex-none justify-center flex items-center gap-2 px-4 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-secondary/50 active:scale-95 transition-all whitespace-nowrap"
           >
-            <Download className="w-4 h-4" /> Export Page
+            <Download className="w-4 h-4" /> 
+            <span className="hidden sm:inline">Export Page</span>
+            <span className="sm:hidden">Page</span>
           </button>
         </div>
       </div>
 
-      {/* Table Card */}
-      <div className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm text-gray-600">
-            <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+      {/* Main Content Area - Table with Scroll */}
+      <div className="flex-1 rounded-xl border border-border bg-card shadow-sm overflow-hidden flex flex-col min-h-0">
+        
+        {/* Scrollable Table Container */}
+        <div className="flex-1 overflow-auto relative">
+          <table className="min-w-full text-sm text-left border-collapse">
+            
+            {/* Sticky Header */}
+            <thead className="bg-secondary/30 border-b border-border text-xs uppercase tracking-wider text-muted-foreground sticky top-0 z-10 backdrop-blur-md">
               <tr>
-                <th className="px-6 py-3 text-center font-semibold">#</th>
-                <th className="px-6 py-3 text-center font-semibold">Date</th>
+                <th className="px-6 py-4 font-semibold text-center w-16">#</th>
+                <th className="px-6 py-4 font-semibold w-40">Date</th>
+                <th className="px-6 py-4 font-semibold w-64">Respondent</th>
+                
+                {/* Dynamic Headers */}
                 {fields.map((field) => (
-                  <th key={field.id} className="px-6 py-3 text-center font-semibold whitespace-nowrap">
+                  <th key={field.id} className="px-6 py-4 font-semibold min-w-[200px]">
                     {field.label}
                   </th>
                 ))}
-                <th className="px-6 py-3 text-center font-semibold">Respondent Email</th>
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-gray-100">
+            {/* Body */}
+            <tbody className="divide-y divide-border bg-card">
               {submissions.map((sub, index) => (
-                <tr key={sub._id} className="hover:bg-blue-50/50 transition-colors">
-                  <td className="px-6 py-4 text-center font-medium text-gray-900">
+                <tr key={sub._id} className="group hover:bg-secondary/20 transition-colors">
+                  
+                  {/* Index */}
+                  <td className="px-6 py-4 text-center font-mono text-xs text-muted-foreground">
                     {(pagination.page - 1) * 10 + index + 1}
                   </td>
 
-                  <td className="px-6 py-4 text-center whitespace-nowrap flex items-center gap-2 text-gray-500 justify-center">
-                    <Calendar className="h-3.5 w-3.5" />
-                    {new Date(sub.submittedAt).toLocaleDateString()}
+                  {/* Date */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-2 text-muted-foreground group-hover:text-foreground transition-colors">
+                      <Calendar className="h-3.5 w-3.5" />
+                      <span>{new Date(sub.submittedAt).toLocaleDateString()}</span>
+                    </div>
                   </td>
 
-                  {fields.map((field) => (
-                    <td key={field.id} className="px-6 py-4 text-center max-w-xs truncate" title={String(sub.data[field.id] || '')}>
-                      {typeof sub.data[field.id] === 'boolean'
-                        ? sub.data[field.id] ? 'Yes' : 'No'
-                        : sub.data[field.id] || <span className="text-gray-300">—</span>}
-                    </td>
-                  ))}
-
-                  <td className="px-6 py-4 text-center">
+                  {/* Respondent (Email) */}
+                  <td className="px-6 py-4">
                     {sub.respondentEmail ? (
-                      <span className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
-                        <Mail className="h-3 w-3" />
-                        {sub.respondentEmail}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                           <Mail className="h-3 w-3 text-primary" />
+                        </div>
+                        <span className="font-medium text-foreground truncate max-w-[180px]" title={sub.respondentEmail}>
+                          {sub.respondentEmail}
+                        </span>
+                      </div>
                     ) : (
-                      <span className="text-gray-400">—</span>
+                      <span className="text-muted-foreground/50 text-xs italic">Anonymous</span>
                     )}
                   </td>
+
+                  {/* Dynamic Fields Data */}
+                  {fields.map((field) => (
+                    <td
+                      key={field.id}
+                      className="px-6 py-4 text-foreground/80 whitespace-nowrap overflow-hidden text-ellipsis max-w-[300px]"
+                      title={String(sub.data[field.id] || "")}
+                    >
+                      {typeof sub.data[field.id] === "boolean" ? (
+                        sub.data[field.id] ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                            Yes
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400">
+                            No
+                          </span>
+                        )
+                      ) : (
+                        sub.data[field.id] || <span className="text-muted-foreground/30">—</span>
+                      )}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+
+        {/* Footer / Pagination - Fixed at bottom of table card */}
+        {pagination.pages > 1 && (
+          <div className="border-t border-border bg-card px-6 py-3 flex items-center justify-between shrink-0">
+            <div className="text-xs text-muted-foreground">
+              Page <span className="font-medium text-foreground">{pagination.page}</span> of{" "}
+              <span className="font-medium text-foreground">{pagination.pages}</span>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="p-1.5 rounded-md text-foreground hover:bg-secondary disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+
+              <button
+                onClick={() => setPage((p) => Math.min(pagination.pages, p + 1))}
+                disabled={page === pagination.pages}
+                className="p-1.5 rounded-md text-foreground hover:bg-secondary disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-
-      {/* Pagination */}
-      {pagination.pages > 1 && (
-        <div className="flex items-center justify-between border-t border-gray-200 bg-white px-6 py-4 mt-4 rounded-b-xl">
-          <div className="text-sm text-gray-500">
-            Page <span className="font-medium text-gray-900">{pagination.page}</span> of{' '}
-            <span className="font-medium text-gray-900">{pagination.pages}</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="rounded-md border border-gray-300 p-2 text-gray-600 hover:bg-gray-100 disabled:opacity-50 transition"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-
-            <button
-              onClick={() => setPage((p) => Math.min(pagination.pages, p + 1))}
-              disabled={page === pagination.pages}
-              className="rounded-md border border-gray-300 p-2 text-gray-600 hover:bg-gray-100 disabled:opacity-50 transition"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
-  );
+  )
 }
